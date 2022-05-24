@@ -4,13 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 typedef struct player
 {
     int id;
     int position;
     int win;
-    double timeConsumed;
 } Player;
 
 typedef struct obstacule
@@ -70,13 +68,12 @@ Nodo *CreateObstacule(int id, int top, int button, char type)
     return nodo;
 }
 
-Nodo2 *CreatePlayer(int id, int position, int win, double timeConsumed)
+Nodo2 *CreatePlayer(int id, int position, int win)
 {
     Nodo2 *nodo = (Nodo2 *)malloc(sizeof(Nodo2));
     nodo->player.id = id;
     nodo->player.position = position;
     nodo->player.win = win;
-    nodo->player.timeConsumed = timeConsumed;
     nodo->next = NULL;
     return nodo;
 }
@@ -109,7 +106,7 @@ void insertObstacule(int id, int top, int button, char type)
         }
         point->next = nodo;
         obst->length++;
-        //  printf("Size %i\n", obst->length);
+        printf("Size %i\n", obst->length);
     }
 }
 
@@ -203,28 +200,22 @@ int split(const char *str, char c, char ***arr)
 void editarJugador(int id, int position, int win)
 {
 
-    printf("WELL \n");
-    printf("Player to be edited %i has position %i, and has won: %i \n", id, position, win);
-    Nodo2 *nodo = CreatePlayer(id, position, win,0);
+    Nodo2 *nodo = CreatePlayer(id, position, win);
     // printf("Player %i EDIT  %i  \n ",id,  position);
-    printf("HEY %d \n",&listPlayers->length);
 
-    if (&listPlayers->head == NULL)
-    {   
-        printf("WELL223 \n");
+    if (listPlayers->head == NULL)
+    {
         listPlayers->head = nodo;
     }
     else
     {
-        printf("WELL22 \n");
-        Nodo2 *puntero = &listPlayers->head;
-         printf("AA Player %i has position %i, and has won: %i \n", puntero->player.id, puntero->player.position, puntero->player.win);
+        Nodo2 *puntero = listPlayers->head;
         if (id == 0)
         {
             Nodo2 *puntero2 = puntero->next;
             nodo->next = puntero2;
             listPlayers->head = nodo;
-            printPlayers2();
+            // printPlayers();
         }
         else
         {
@@ -263,15 +254,13 @@ int contarObstacules()
     return obst->length;
 }
 
-void printPlayers(ListPlayers *listPlayersTemporal)
+void printPlayers()
 {
-    if (listPlayersTemporal->head != NULL)
+    if (listPlayers->head != NULL)
     {
-
-        Nodo2 *point = listPlayersTemporal->head;
+        Nodo2 *point = listPlayers->head;
         while (point->next)
         {
-
             printf("Player %i has position %i, and has won: %i \n", point->player.id, point->player.position, point->player.win);
             point = point->next;
         }
@@ -281,42 +270,22 @@ void printPlayers(ListPlayers *listPlayersTemporal)
         printf("NO Player \n");
     }
 }
-void printPlayers2()
+
+void insertPlayer(int id, int position, int win)
 {
-    if (listPlayers->head != NULL)
-    {
-
-        Nodo2 *point = listPlayers->head;
-        while (point->next)
-        {
-
-            printf("Player %i has position %i, and has won: %i , time %f \n", point->player.id, point->player.position, point->player.win, point->player.timeConsumed);
-            point = point->next;
-        }
-    }
-    else
-    {
-        printf("NO Player \n");
-    }
-}
-
-void insertPlayer(int id, int position, int win, double timeConsumed)
-{
-    printf("The values are %i,%i,%i\n", id, position, win);
-    Nodo2 *nodo = CreatePlayer(id, position, win, timeConsumed);
+    Nodo2 *nodo = CreatePlayer(id, position, win);
 
     if (listPlayers == NULL)
     {
         listPlayers = (ListPlayers *)malloc(sizeof(ListPlayers));
         listPlayers->length = 0;
         listPlayers->head = NULL;
-        printf("NO Player \n");
+        // printf("NO Player \n");
     }
     if (listPlayers->head == NULL)
     {
         listPlayers->head = nodo;
         listPlayers->length++;
-        printf("in %d \n",  listPlayers->length);
     }
     else
     {
@@ -332,7 +301,7 @@ void insertPlayer(int id, int position, int win, double timeConsumed)
 
 void insertPlayer2(int id, int position, int win)
 {
-    Nodo2 *nodo = CreatePlayer(id, position, win, 0);
+    Nodo2 *nodo = CreatePlayer(id, position, win);
 
     if (listPlayers2 == NULL)
     {
@@ -384,4 +353,3 @@ Nodo2 *obtainPlayer(int id)
         return point;
     }
 }
-

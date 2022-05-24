@@ -5,7 +5,6 @@
 #include <time.h>
 
 Table *table;
-MPI_File fh0;
 MPI_File fh1;
 MPI_File fh2;
 MPI_File fh3;
@@ -23,9 +22,7 @@ int main(int argc, char *argv[])
 
   MPI_Init(0, 0);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_File_open(MPI_COMM_WORLD, "0.txt",
-                MPI_MODE_CREATE | MPI_MODE_WRONLY,
-                MPI_INFO_NULL, &fh0);
+
   MPI_File_open(MPI_COMM_WORLD, "1.txt",
                 MPI_MODE_CREATE | MPI_MODE_WRONLY,
                 MPI_INFO_NULL, &fh1);
@@ -35,8 +32,6 @@ int main(int argc, char *argv[])
   MPI_File_open(MPI_COMM_WORLD, "3.txt",
                 MPI_MODE_CREATE | MPI_MODE_WRONLY,
                 MPI_INFO_NULL, &fh3);
-  char string0[80] = "PROCESSOR 0 \n";
-  MPI_File_write(fh0, string0, strlen(string0), MPI_CHAR, MPI_STATUS_IGNORE);
   char string1[80] = "PROCESSOR 1 \n";
   MPI_File_write(fh1, string1, strlen(string1), MPI_CHAR, MPI_STATUS_IGNORE);
   char string2[80] = "PROCESSOR 2 \n";
@@ -44,12 +39,16 @@ int main(int argc, char *argv[])
   char string3[80] = "PROCESSOR 3 \n";
   MPI_File_write(fh3, string3, strlen(string3), MPI_CHAR, MPI_STATUS_IGNORE);
   struct timeval start, end;
+  gettimeofday(&start, NULL);
   processes(argc, argv, rank);
-  MPI_File_close(&fh0);
+  MPI_Finalize();
+  gettimeofday(&end, NULL);
+  char time[80];
+  snprintf(time, 80, "Time in seconds %0.8f \n", time_diff(&start, &end));
+  MPI_File_write(fh3, time, strlen(time), MPI_CHAR, MPI_STATUS_IGNORE);
   MPI_File_close(&fh1);
   MPI_File_close(&fh2);
   MPI_File_close(&fh3);
-  MPI_Finalize();
 }
 
 void processes(int argc, char *argv[], int rank)
@@ -98,69 +97,28 @@ void processes(int argc, char *argv[], int rank)
   table->obstacul = obst;
   int number = 0;
 
-  char line[100];
-  int ciclye = 0;
-  int total = 0;
-
-  if (rank == 0)
+  char *filename = "input.txt";
+  FILE *Input = fopen(filename, "r");
+  if (Input == NULL)
   {
-    char *filename = "input1.txt";
-    FILE *Input = fopen(filename, "r");
-    if (Input == NULL)
-    {
-      perror("Unable to open the file");
-      exit(1);
-    }
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
-    while (fgets(line, sizeof(line), Input))
-    {
-     
-      char *id = strtok(line, ",");
-      char *position = strtok(NULL, ",");
-      char *win = strtok(NULL, ",");
-      int c = 0;
-      char **arr = NULL;
-      split(id, ' ', &arr);
-      char **arr2 = NULL;
-      c = split(position, ' ', &arr2);
-      char **arr3 = NULL;
-      split(win, ' ', &arr3);
-      Player player;
-      player.id = strtol(arr[0], NULL, 10);
-      player.position = strtol(arr2[0], NULL, 10);
-      player.win = strtol(arr3[0], NULL, 10);
-      playGame(player, 0);
-    }
-    gettimeofday(&end, NULL);
-
-    float time= time_diff(&start, &end);
-    float time1;
-    float time2;
-    float time3;
-     MPI_Recv(&time1, 1, MPI_FLOAT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-     MPI_Recv(&time2, 1, MPI_FLOAT, 2, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-     MPI_Recv(&time3, 1, MPI_FLOAT, 3, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    char answer[80];
-    snprintf(answer, 80, "Time FINAL in seconds %0.8f \n", time);
-    MPI_File_write(fh0, answer, strlen(answer), MPI_CHAR, MPI_STATUS_IGNORE);
+    perror("Unable to open the file");
+    exit(1);
   }
-  if (rank == 1)
-  {
 
-    char *filename = "input2.txt";
-    FILE *Input = fopen(filename, "r");
-    if (Input == NULL)
-    {
-      perror("Unable to open the file");
-      exit(1);
+  char line[100];
+  int ciclye = 1;
+  int total = 0;
+  while (fgets(line, sizeof(line), Input))
+  {
+    total++;
+      ciclye++;
+    printf("The number is %d \n", ciclye);
+    if(ciclye==3){
+      ciclye = 0;
     }
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
-    while (fgets(line, sizeof(line), Input))
+    if (rank == 0)
     {
-      total++;
-      printf("The number is %i\n", total);
+
       char *id = strtok(line, ",");
       char *position = strtok(NULL, ",");
       char *win = strtok(NULL, ",");
@@ -171,91 +129,50 @@ void processes(int argc, char *argv[], int rank)
       c = split(position, ' ', &arr2);
       char **arr3 = NULL;
       split(win, ' ', &arr3);
+    
+
       Player player;
       player.id = strtol(arr[0], NULL, 10);
       player.position = strtol(arr2[0], NULL, 10);
       player.win = strtol(arr3[0], NULL, 10);
+      if (ciclye == 1)
+      {
+        MPI_Send(&player, sizeof(Player), MPI_CHAR, 1, 0, MPI_COMM_WORLD);
+      }
+      else if (ciclye == 2)
+      {
+
+        MPI_Send(&player, sizeof(Player), MPI_CHAR, 2, 0, MPI_COMM_WORLD);
+      }
+      else if (ciclye == 3)
+      {
+        MPI_Send(&player, sizeof(Player), MPI_CHAR, 3, 0, MPI_COMM_WORLD);
+        
+      }
+    }
+    if (rank == 1)
+    {
+
+      printf("Proccessor 1 \n");
+      Player player;
+      MPI_Recv(&player, sizeof(Player), MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
       playGame(player, 1);
     }
-    
-    float time= time_diff(&start, &end);
-    char answer[80];
-    snprintf(answer, 80, "Time FINAL in seconds %0.8f \n", time_diff(&start, &end));
-    MPI_File_write(fh1, answer, strlen(answer), MPI_CHAR, MPI_STATUS_IGNORE);
-    MPI_Send(&time, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
-  }
-  else if (rank == 2)
-  {
-    char *filename = "input3.txt";
-    FILE *Input = fopen(filename, "r");
-    if (Input == NULL)
+    else if (rank == 2)
     {
-      perror("Unable to open the file");
-      exit(1);
-    }
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
-    while (fgets(line, sizeof(line), Input))
-    {
-     
-      char *id = strtok(line, ",");
-      char *position = strtok(NULL, ",");
-      char *win = strtok(NULL, ",");
-      int c = 0;
-      char **arr = NULL;
-      split(id, ' ', &arr);
-      char **arr2 = NULL;
-      c = split(position, ' ', &arr2);
-      char **arr3 = NULL;
-      split(win, ' ', &arr3);
+      printf("Processor 2 \n");
       Player player;
-      player.id = strtol(arr[0], NULL, 10);
-      player.position = strtol(arr2[0], NULL, 10);
-      player.win = strtol(arr3[0], NULL, 10);
+      MPI_Recv(&player, sizeof(Player), MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       playGame(player, 2);
     }
-   float time= time_diff(&start, &end);
-    char answer[80];
-    snprintf(answer, 80, "Time FINAL in seconds %0.8f \n", time_diff(&start, &end));
-    MPI_File_write(fh2, answer, strlen(answer), MPI_CHAR, MPI_STATUS_IGNORE);
-    MPI_Send(&time, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
-  }
-  else if (rank == 3)
-  {
-    char *filename = "input4.txt";
-    FILE *Input = fopen(filename, "r");
-    if (Input == NULL)
+    else if (rank == 3)
     {
-      perror("Unable to open the file");
-      exit(1);
-    }
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
-    while (fgets(line, sizeof(line), Input))
-    {
-      total++;
-      printf("The number is %i\n", total);
-      char *id = strtok(line, ",");
-      char *position = strtok(NULL, ",");
-      char *win = strtok(NULL, ",");
-      int c = 0;
-      char **arr = NULL;
-      split(id, ' ', &arr);
-      char **arr2 = NULL;
-      c = split(position, ' ', &arr2);
-      char **arr3 = NULL;
-      split(win, ' ', &arr3);
+      printf("Procesor 3\n");
       Player player;
-      player.id = strtol(arr[0], NULL, 10);
-      player.position = strtol(arr2[0], NULL, 10);
-      player.win = strtol(arr3[0], NULL, 10);
+      MPI_Recv(&player, sizeof(Player), MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       playGame(player, 3);
     }
-   float time= time_diff(&start, &end);
-    MPI_Send(&time, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
-     char answer[80];
-    snprintf(answer, 80, "Time FINAL in seconds %0.8f \n", time_diff(&start, &end));
-    MPI_File_write(fh3, answer, strlen(answer), MPI_CHAR, MPI_STATUS_IGNORE);
   }
 }
 
@@ -270,7 +187,6 @@ void playGame(Player player, int processor)
     while (count == 0)
     {
       int l;
-
       for (l = 0; l < 1; l++)
       {
         if (player.win != 1)
@@ -334,14 +250,7 @@ void playGame(Player player, int processor)
     gettimeofday(&end, NULL);
     size_t count;
     char str[] = "HELLO \n";
-    if (processor == 0)
-    {
-      printf("HELLO FROM 0");
-      char string[80];
-      snprintf(string, 80, "Player %d took %f to win the game \n", player.id, time_diff(&start, &end));
-      MPI_File_write(fh0, string, strlen(string), MPI_CHAR, MPI_STATUS_IGNORE);
-    }
-    else if (processor == 1)
+    if (processor == 1)
     {
       printf("HELLO FROM 1");
       char string[80];
@@ -351,14 +260,12 @@ void playGame(Player player, int processor)
     else if (processor == 2)
     {
       char string[80];
-      printf("HELLO FROM 2");
       snprintf(string, 80, "Player %d took %f to win the game \n", player.id, time_diff(&start, &end));
       MPI_File_write(fh2, string, strlen(string), MPI_CHAR, MPI_STATUS_IGNORE);
     }
     else if (processor == 3)
     {
       char string[80];
-      printf("HELLO FROM 3");
       snprintf(string, 80, "Player %d took %f to win the game \n", player.id, time_diff(&start, &end));
       MPI_File_write(fh3, string, strlen(string), MPI_CHAR, MPI_STATUS_IGNORE);
     }
